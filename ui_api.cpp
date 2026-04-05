@@ -1481,9 +1481,15 @@ static int l_SetWindowTitle(lua_State* L)
 static int l_GetCursorPos(lua_State* L)
 {
 	ui_main_c* ui = GetUIPtr(L);
+	// GLFW returns cursor pos in window (logical) coordinates.
+	// When apiDpiAware, screen size is in framebuffer (physical) coordinates.
+	// Scale cursor to match: multiply by (fbSize / windowSize) then apply VirtualMap.
+	int fbW = ui->sys->video->vid.fbSize[0];
+	int winW = ui->sys->video->vid.size[0];
+	float cursorScale = (winW > 0) ? (float)fbW / (float)winW : 1.0f;
 	const float dpiScale = ui->renderer->VirtualScreenScaleFactor();
-	lua_pushinteger(L, (lua_Integer)std::lround(ui->renderer->VirtualMap(ui->cursorX) / dpiScale));
-	lua_pushinteger(L, (lua_Integer)std::lround(ui->renderer->VirtualMap(ui->cursorY) / dpiScale));
+	lua_pushinteger(L, (lua_Integer)std::lround(ui->renderer->VirtualMap((int)(ui->cursorX * cursorScale)) / dpiScale));
+	lua_pushinteger(L, (lua_Integer)std::lround(ui->renderer->VirtualMap((int)(ui->cursorY * cursorScale)) / dpiScale));
 	return 2;
 }
 

@@ -115,6 +115,8 @@ sys_video_c::sys_video_c(sys_IMain* sysHnd)
 		platformType = GLFW_ANGLE_PLATFORM_TYPE_D3D11;
 	else // Native Windows
 		platformType = GLFW_ANGLE_PLATFORM_TYPE_D3D11;
+#elif defined(__APPLE__)
+	platformType = GLFW_ANGLE_PLATFORM_TYPE_METAL;
 #endif
 	glfwInitHint(GLFW_ANGLE_PLATFORM_TYPE, platformType);
 	glfwInit();
@@ -609,13 +611,19 @@ int sys_video_c::Apply(sys_vidSet_s* set)
 			if (ImGui::GetIO().WantCaptureMouse) {
 				return;
 			}
-			if (yoffset > 0) {
+			// Accumulate fractional scroll deltas from macOS trackpad/smooth scrolling.
+			// Fire discrete wheel events only when a full "notch" (1.0) is accumulated.
+			static double scrollAccum = 0.0;
+			scrollAccum += yoffset;
+			while (scrollAccum >= 1.0) {
 				sys->core->KeyEvent(KEY_MWHEELUP, KE_KEYDOWN);
 				sys->core->KeyEvent(KEY_MWHEELUP, KE_KEYUP);
+				scrollAccum -= 1.0;
 			}
-			else if (yoffset < 0) {
+			while (scrollAccum <= -1.0) {
 				sys->core->KeyEvent(KEY_MWHEELDOWN, KE_KEYDOWN);
 				sys->core->KeyEvent(KEY_MWHEELDOWN, KE_KEYUP);
+				scrollAccum += 1.0;
 			}
 			});
 		glfwSetWindowContentScaleCallback(wnd, [](GLFWwindow* wnd, float xScale, float yScale) {

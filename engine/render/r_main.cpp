@@ -12,7 +12,9 @@
 
 #include <algorithm>
 #include <array>
+#include <chrono>
 #include <filesystem>
+#include <thread>
 #include <fmt/chrono.h>
 #include <future>
 #include <map>
@@ -1188,8 +1190,10 @@ void r_renderer_c::BeginFrame()
 				glBindFramebuffer(GL_FRAMEBUFFER, rtt.framebuffer);
 				glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, rtt.colorTexture, 0);
 
-				glCheckFramebufferStatus(GL_FRAMEBUFFER);
-
+				auto status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+				if (status != GL_FRAMEBUFFER_COMPLETE) {
+					sys->con->Printf("FBO[%d] INCOMPLETE: %x (size %dx%d)\n", i, status, wNew, hNew);
+				}
 				glBindFramebuffer(GL_FRAMEBUFFER, prevFB);
 				glBindTexture(GL_TEXTURE_2D, prevTex2D);
 			}
@@ -1640,7 +1644,7 @@ void r_renderer_c::GetShaderImageSize(r_shaderHnd_c* hnd, int& width, int& heigh
 	if (hnd)
 	{
 		while (hnd->sh->tex->status < r_tex_c::SIZE_KNOWN) {
-			Sleep(1);
+			std::this_thread::sleep_for(std::chrono::milliseconds(1));
 		}
 		width = hnd->sh->tex->fileWidth;
 		height = hnd->sh->tex->fileHeight;

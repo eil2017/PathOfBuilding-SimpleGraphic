@@ -1,0 +1,13 @@
+diff --git a/src/lj_utf8win.h b/src/lj_utf8win.h
+index 72e9ccae..a1b2c3f0 100644
+--- a/src/lj_utf8win.h
++++ b/src/lj_utf8win.h
+@@ -17,7 +17,7 @@ int _lua_system(char const* cmd);
+ char* _lua_tmpnam();
+ #else
+ #define _lua_fopen(path, mode) fopen(path, mode)
+-#define _lua_getenvcopy(name) strdup(getenv(name))
++#define _lua_getenvcopy(name) ({ const char* _v = getenv(name); _v ? strdup(_v) : NULL; })
+ #define _lua_getenvfree(name) free(name)
+ #define _lua_remove(path) remove(path)
+ #define _lua_rename(oldpath, newpath) rename(oldpath, newpath)

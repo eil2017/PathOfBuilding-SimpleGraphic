@@ -3,7 +3,10 @@
   "version": "2.5",
   "dependencies": [
     "angle",
-    "curl",
+    {
+      "name": "curl",
+      "features": ["ssl"]
+    },
     "fmt",
     "glfw3",
     "gli",
