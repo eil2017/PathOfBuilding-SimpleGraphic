@@ -4,7 +4,10 @@
   "dependencies": [
     "angle",
     "cmakerc",
-    "curl",
+    {
+      "name": "curl",
+      "features": ["ssl"]
+    },
     "fmt",
     "glfw3",
     "gli",

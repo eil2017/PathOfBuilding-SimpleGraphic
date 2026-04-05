@@ -192,7 +192,7 @@ target_include_directories(imgui PUBLIC
 )
 
 target_link_libraries(imgui PUBLIC
-    unofficial::angle::libGLESv2
+    $<$<NOT:$<BOOL:${APPLE}>>:unofficial::angle::libGLESv2>
     glfw
 )
 
@@ -230,17 +230,25 @@ endif ()
 if (APPLE)
     find_library(CORE_FOUNDATION_LIBRARY CoreFoundation)
     find_library(APPLICATION_SERVICES_LIBRARY ApplicationServices)
+    # On macOS, link against a prebuilt shared ANGLE library to avoid
+    # duplicate ObjC class conflicts when GLFW dlopen's EGL at runtime.
+    find_library(ANGLE_SHARED_LIB ANGLE PATHS "${CMAKE_SOURCE_DIR}/../app" NO_DEFAULT_PATH)
+    if (NOT ANGLE_SHARED_LIB)
+        message(FATAL_ERROR "libANGLE.dylib not found in ${CMAKE_SOURCE_DIR}/../app — required for macOS build")
+    endif()
     target_link_libraries(SimpleGraphic
         PRIVATE
         ${CORE_FOUNDATION_LIBRARY}
         ${APPLICATION_SERVICES_LIBRARY}
+        ${ANGLE_SHARED_LIB}
     )
+    target_link_libraries(imgui PRIVATE ${ANGLE_SHARED_LIB})
 endif ()
 
 target_link_libraries(SimpleGraphic
     PRIVATE
-    unofficial::angle::libEGL
-    unofficial::angle::libGLESv2
+    $<$<NOT:$<BOOL:${APPLE}>>:unofficial::angle::libEGL>
+    $<$<NOT:$<BOOL:${APPLE}>>:unofficial::angle::libGLESv2>
     cmp_core
     fmt::fmt
     glfw
@@ -254,7 +262,7 @@ target_link_libraries(SimpleGraphic
     Threads::Threads
     WebP::webpdecoder
     ZLIB::ZLIB
-    zstd::libzstd_shared
+    $<IF:$<TARGET_EXISTS:zstd::libzstd_shared>,zstd::libzstd_shared,zstd::libzstd_static>
 )
 
 install(FILES $<TARGET_RUNTIME_DLLS:SimpleGraphic> DESTINATION ".")
@@ -302,6 +310,11 @@ target_include_directories(lcurl
     ${LCURL_SOURCE_DIR}/src
 )
 
+target_compile_definitions(lcurl
+    PRIVATE
+    LCURL_USE_LUAJIT
+)
+
 target_link_libraries(lcurl
     PRIVATE
     CURL::libcurl
@@ -315,10 +328,12 @@ install(FILES $<TARGET_RUNTIME_DLLS:lcurl> DESTINATION ".")
 
 add_library(lua-utf8 SHARED libs/luautf8/lutf8lib.c)
 
-target_compile_definitions(lua-utf8
-    PRIVATE
-    LUA_BUILD_AS_DLL
-)
+if (WIN32)
+    target_compile_definitions(lua-utf8
+        PRIVATE
+        LUA_BUILD_AS_DLL
+    )
+endif()
 
 target_include_directories(lua-utf8
     PRIVATE
@@ -334,7 +349,7 @@ install(FILES $<TARGET_RUNTIME_DLLS:lua-utf8> DESTINATION ".")
 
 # luasocket module
 
-add_library(luasocket SHARED
+set(LUASOCKET_SOURCES
    "libs/luasocket/src/auxiliar.c"
    "libs/luasocket/src/buffer.c"
    "libs/luasocket/src/compat.c"
@@ -347,20 +362,34 @@ add_library(luasocket SHARED
    "libs/luasocket/src/tcp.c"
    "libs/luasocket/src/timeout.c"
    "libs/luasocket/src/udp.c"
-   "libs/luasocket/src/wsocket.c"
 )
+
+if (WIN32)
+    list(APPEND LUASOCKET_SOURCES "libs/luasocket/src/wsocket.c")
+else()
+    list(APPEND LUASOCKET_SOURCES "libs/luasocket/src/usocket.c")
+endif()
+
+add_library(luasocket SHARED ${LUASOCKET_SOURCES})
 
 target_include_directories(luasocket
     PRIVATE
     ${LSOCKET_SOURCE_DIR}/src
 )
 
-target_link_libraries(luasocket
-    PRIVATE
-    LuaJIT::LuaJIT
-    wsock32
-    ws2_32
-)
+if (WIN32)
+    target_link_libraries(luasocket
+        PRIVATE
+        LuaJIT::LuaJIT
+        wsock32
+        ws2_32
+    )
+else()
+    target_link_libraries(luasocket
+        PRIVATE
+        LuaJIT::LuaJIT
+    )
+endif()
 
 set_target_properties( luasocket PROPERTIES OUTPUT_NAME "socket" ) 
 install(TARGETS luasocket RUNTIME DESTINATION ".")
