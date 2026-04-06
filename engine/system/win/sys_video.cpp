@@ -462,11 +462,6 @@ int sys_video_c::Apply(sys_vidSet_s* set)
 		glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
 		glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 0);
 		glfwWindowHint(GLFW_DEPTH_BITS, 24);
-#ifdef __APPLE__
-		// ANGLE Metal handles Retina scaling internally via CAMetalLayer.
-		// Disable GLFW framebuffer scaling to prevent double-DPI on macOS.
-		glfwWindowHint(GLFW_SCALE_FRAMEBUFFER, GLFW_FALSE);
-#endif
 		//glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_COMPAT_PROFILE);
 
 		wnd = glfwCreateWindow(cur.mode[0], cur.mode[1], curTitle, nullptr, nullptr);
