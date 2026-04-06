@@ -432,7 +432,7 @@ void ui_main_c::Frame()
 	}
 
 	//sys->con->Printf("Finishing up...\n");
-	if ( !sys->video->IsActive() && !hasActiveCoroutine && !hasSubscript ) {
+	if ( !sys->video->IsActive() && !sys->video->IsCursorOverWindow() && !hasActiveCoroutine && !hasSubscript ) {
 		sys->Sleep(100);
 	}
 
