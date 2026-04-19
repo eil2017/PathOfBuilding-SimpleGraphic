@@ -2125,14 +2125,17 @@ int ui_main_c::InitAPI(lua_State* L)
 	sol::state_view lua(L);
 	luaL_openlibs(L);
 
-	// Add "lua/" subdir for non-JIT Lua
+	// Add absolute lua/ path so require() works regardless of cwd (main and subscript threads).
+	// Also add ?/init.lua pattern for directory-style modules (e.g. sha1/).
 	{
+		ui_main_c* pathUi = GetUIPtr(L);
+		std::string lua_dir = (pathUi->scriptWorkDir / "lua").string();
 		lua_getglobal(L, "package");
-		char const* tn = lua_typename(L, -1);
 		lua_getfield(L, -1, "path");
 		std::string old_path = lua_tostring(L, -1);
 		lua_pop(L, 1);
-		old_path += ";lua/?.lua";
+		old_path += ";lua/?.lua;lua/?/init.lua";
+		old_path += ";" + lua_dir + "/?.lua;" + lua_dir + "/?/init.lua";
 		lua_pushstring(L, old_path.c_str());
 		lua_setfield(L, -2, "path");
 		lua_pop(L, 1);
@@ -2217,6 +2220,9 @@ int ui_main_c::InitAPI(lua_State* L)
 	ADDFUNC(RenderInit);
 	ADDFUNC(GetScreenSize);
 	ADDFUNC(GetScreenScale);
+	// Alias used by PoB Lua (upstream name differs from engine function name)
+	lua_pushcfunction(L, l_GetScreenSize);
+	lua_setglobal(L, "GetVirtualScreenSize");
 	ADDFUNC(SetClearColor);
 	ADDFUNC(SetDrawLayer);
 	ADDFUNC(GetDrawLayer);

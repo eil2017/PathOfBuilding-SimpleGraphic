@@ -322,6 +322,19 @@ bool ui_subscript_c::Start()
 	// Add libraries and APIs
 	lua_gc(L, LUA_GCSTOP, 0);
 	luaL_openlibs(L);
+	// Add absolute lua/ path so require() works regardless of cwd in worker threads
+	{
+		std::string lua_dir = (ui->scriptWorkDir / "lua").string();
+		lua_getglobal(L, "package");
+		lua_getfield(L, -1, "path");
+		std::string old_path = lua_tostring(L, -1);
+		lua_pop(L, 1);
+		old_path += ";lua/?.lua;lua/?/init.lua";
+		old_path += ";" + lua_dir + "/?.lua;" + lua_dir + "/?/init.lua";
+		lua_pushstring(L, old_path.c_str());
+		lua_setfield(L, -2, "path");
+		lua_pop(L, 1);
+	}
 	lua_getglobal(L, "os");
 	lua_pushcfunction(L, l_os_exit);
 	lua_setfield(L, -2, "exit");
