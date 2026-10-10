@@ -723,6 +723,7 @@ void r_renderer_c::Init(r_featureFlag_e features)
 
 	glGetIntegerv(GL_MAX_TEXTURE_SIZE, (int*)&texMaxDim);
 	sys->con->Printf("GL_MAX_TEXTURE_SIZE: %d\n", texMaxDim);
+	sys->con->Printf("GL_RENDERER: %s\nGL_VERSION: %s\n", (const char*)glGetString(GL_RENDERER), (const char*)glGetString(GL_VERSION));
 
 	// Set default state
 	glClearColor(0.0, 0.0, 0.0, 1.0);
