@@ -230,19 +230,33 @@ endif ()
 if (APPLE)
     find_library(CORE_FOUNDATION_LIBRARY CoreFoundation)
     find_library(APPLICATION_SERVICES_LIBRARY ApplicationServices)
-    # On macOS, link against a prebuilt shared ANGLE library to avoid
-    # duplicate ObjC class conflicts when GLFW dlopen's EGL at runtime.
-    find_library(ANGLE_SHARED_LIB ANGLE PATHS "${CMAKE_SOURCE_DIR}/../app" NO_DEFAULT_PATH)
-    if (NOT ANGLE_SHARED_LIB)
-        message(FATAL_ERROR "libANGLE.dylib not found in ${CMAKE_SOURCE_DIR}/../app — required for macOS build")
-    endif()
+    # ANGLE must be a single shared image: GLFW dlopen()s libEGL/libGLESv2 at runtime,
+    # and a second statically linked copy registers its ObjC classes twice. Link vcpkg's
+    # static ANGLE libraries into libANGLE.dylib; the app bundle symlinks libEGL.dylib and
+    # libGLESv2.dylib to it.
+    set(ANGLE_VCPKG_LIB "${VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/lib")
+    file(GLOB ANGLE_ABSL_LIBS "${ANGLE_VCPKG_LIB}/libabsl_*.a")
+    file(WRITE "${CMAKE_BINARY_DIR}/angle_shared.c" "/* libANGLE.dylib: content comes from force-loaded static libs */\n")
+    add_library(ANGLE SHARED "${CMAKE_BINARY_DIR}/angle_shared.c")
+    target_link_options(ANGLE PRIVATE
+        "LINKER:-force_load,${ANGLE_VCPKG_LIB}/libEGL_angle.a"
+        "LINKER:-force_load,${ANGLE_VCPKG_LIB}/libGLESv2_angle.a"
+    )
+    target_link_libraries(ANGLE PRIVATE
+        "${ANGLE_VCPKG_LIB}/ANGLE.a"
+        ${ANGLE_ABSL_LIBS}
+        ZLIB::ZLIB
+        "-framework Metal" "-framework IOSurface" "-framework QuartzCore" "-framework CoreGraphics"
+        "-framework Cocoa" "-framework IOKit" "-framework CoreFoundation" "-framework Foundation"
+    )
+    set_target_properties(ANGLE PROPERTIES LINKER_LANGUAGE CXX)
     target_link_libraries(SimpleGraphic
         PRIVATE
         ${CORE_FOUNDATION_LIBRARY}
         ${APPLICATION_SERVICES_LIBRARY}
-        ${ANGLE_SHARED_LIB}
+        ANGLE
     )
-    target_link_libraries(imgui PRIVATE ${ANGLE_SHARED_LIB})
+    target_link_libraries(imgui PRIVATE ANGLE)
 endif ()
 
 target_link_libraries(SimpleGraphic
