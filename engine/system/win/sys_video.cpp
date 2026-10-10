@@ -32,6 +32,7 @@ public:
 	void	SetForeground();
 	bool	IsActive();
 	void	FramebufferSizeChanged(int width, int height);
+	void	BeginFrame();
 	void	SizeChanged(int width, int height, bool max);
 	void	PosChanged(int x, int y);
 	void	GetMinSize(int& width, int& height);
@@ -684,6 +685,29 @@ void sys_video_c::FramebufferSizeChanged(int width, int height)
 		vid.fbSize[0] = width;
 		vid.fbSize[1] = height;
 	}
+}
+
+void sys_video_c::BeginFrame()
+{
+#ifdef __APPLE__
+	// The window is created at vid_mode size and then positioned/resized before the first
+	// frame. ANGLE's window surface (seen with the CGL backend) keeps the creation-time size
+	// until a live resize, so the frame is shown magnified from the bottom-left. Resize by
+	// 1pt and back once the first frames are out.
+	static int frame = 0;
+	static int savedW = 0, savedH = 0;
+	if (!initialised || frame > 4 || glfwGetWindowAttrib(wnd, GLFW_ICONIFIED)) {
+		return;
+	}
+	++frame;
+	if (frame == 3) {
+		glfwGetWindowSize(wnd, &savedW, &savedH);
+		glfwSetWindowSize(wnd, savedW, savedH - 1);
+	}
+	else if (frame == 4 && savedW > 0) {
+		glfwSetWindowSize(wnd, savedW, savedH);
+	}
+#endif
 }
 
 void sys_video_c::SizeChanged(int width, int height, bool max)

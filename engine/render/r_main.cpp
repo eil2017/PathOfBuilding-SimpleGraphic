@@ -987,6 +987,7 @@ void r_renderer_c::BeginFrame()
 	ImGui_ImplOpenGL3_NewFrame();
 	ImGui_ImplGlfw_NewFrame();
 	ImGui::NewFrame();
+	sys->video->BeginFrame();
 	{
 		auto& vid = sys->video->vid;
 		int wNew = VirtualScreenWidth();
